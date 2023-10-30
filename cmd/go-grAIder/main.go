@@ -1,21 +1,42 @@
 package main
 
 import (
+	"bufio"
+	"context"
 	"fmt"
-	"github.com/swarnimcodes/go-grAIder/internal/context"
 	"os"
+
+	openai "github.com/sashabaranov/go-openai"
 )
 
-func openaiConfig() {
-	var apiKey string = os.Getenv("OPEN_AI_API_KEY_MS")
-	if apiKey == "" {
-		fmt.Println("OpenAI API Key not found!")
-	} else {
-		fmt.Println("API Key: ", apiKey)
-	}
-}
-
 func main() {
-	fmt.Println(context.Hw)
-	openaiConfig()
+	client := openai.NewClient(os.Getenv("OPEN_AI_API_KEY_MS"))
+
+	req := openai.ChatCompletionRequest{
+		Model: openai.GPT3Dot5Turbo16K,
+		Messages: []openai.ChatCompletionMessage{
+			{
+				Role:    openai.ChatMessageRoleSystem,
+				Content: "you are a helpful chatbot",
+			},
+		},
+	}
+	fmt.Println("Conversation")
+	fmt.Println("---------------------")
+	fmt.Print("> ")
+	s := bufio.NewScanner(os.Stdin)
+	for s.Scan() {
+		req.Messages = append(req.Messages, openai.ChatCompletionMessage{
+			Role:    openai.ChatMessageRoleUser,
+			Content: s.Text(),
+		})
+		resp, err := client.CreateChatCompletion(context.Background(), req)
+		if err != nil {
+			fmt.Printf("ChatCompletion error: %v\n", err)
+			continue
+		}
+		fmt.Printf("%s\n\n", resp.Choices[0].Message.Content)
+		req.Messages = append(req.Messages, resp.Choices[0].Message)
+		fmt.Print("> ")
+	}
 }
